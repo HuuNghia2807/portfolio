@@ -25,6 +25,7 @@ class Ball {
   dx: number;
   dy: number;
   radius: number;
+  fontSize: number;
   isHovered: boolean;
   isDragged: boolean;
   hasBounced: boolean;
@@ -38,6 +39,7 @@ class Ball {
     this.dx = 0;
     this.dy = dy;
     this.radius = radius;
+    this.fontSize = this.calculateFontSize();
     this.isHovered = false;
     this.isDragged = false;
     this.hasBounced = false;
@@ -47,38 +49,57 @@ class Ball {
     document.body.appendChild(this.popup);
   }
 
+  calculateFontSize(): number {
+    const fontSize = this.radius * 0.25;
+    return Math.max(8, Math.min(fontSize, 20));
+  }
+
+  updateSize(newRadius: number) {
+    this.radius = newRadius;
+    this.fontSize = this.calculateFontSize();
+  }
+
   draw(ctx: CanvasRenderingContext2D) {
+    const gradient = ctx.createLinearGradient(
+      this.x - this.radius,
+      this.y - this.radius,
+      this.x + this.radius,
+      this.y + this.radius
+    );
+    gradient.addColorStop(0, "#00f");
+    gradient.addColorStop(1, "#0ff");
+
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffcc00";
+    ctx.fillStyle = "transparent";
     ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = gradient;
+    ctx.stroke();
     ctx.closePath();
-    ctx.fillStyle = "#000";
-    ctx.font = "bold 14px Arial";
+
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${this.fontSize}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(this.skill.name, this.x, this.y);
   }
 
   update(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
-    if (this.isDragged) {
-      // Không áp dụng vận tốc khi kéo
-    } else if (!this.isHovered) {
+    if (!this.isDragged) {
       if (!this.hasBounced) {
         this.y += this.dy;
         this.dy += gravity;
         if (this.y + this.radius > canvas.height) {
           this.y = canvas.height - this.radius;
-          this.dy = -Math.sqrt(2 * gravity * (canvas.height / 2));
-          this.dx = Math.random() * 6 - 3;
+          this.dy = -0.8; // Tốc độ bật lên là -0.8
+          this.dx = Math.random() < 0.5 ? 0.8 : -0.8; // Tốc độ ngang là 0.8 hoặc -0.8
           this.hasBounced = true;
         }
       } else {
         this.x += this.dx;
         this.y += this.dy;
-        this.dx *= friction;
-        this.dy *= friction;
-
+        // Bỏ friction và minSpeed để tốc độ không giảm dần
         if (
           this.y <= canvas.height / 2 &&
           this.hasBounced &&
@@ -86,11 +107,6 @@ class Ball {
         ) {
           this.isSeparated = true;
         }
-
-        if (Math.abs(this.dx) < minSpeed)
-          this.dx = minSpeed * Math.sign(this.dx);
-        if (Math.abs(this.dy) < minSpeed)
-          this.dy = minSpeed * Math.sign(this.dy);
 
         if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
           this.dx *= -1;
@@ -135,9 +151,9 @@ class Ball {
     }
   }
 
-  showPopup() {
-    this.popup.style.left = `${this.x + this.radius}px`;
-    this.popup.style.top = `${this.y - this.radius}px`;
+  showPopup(canvasRect: DOMRect) {
+    this.popup.style.left = `${canvasRect.left + this.x + this.radius}px`;
+    this.popup.style.top = `${canvasRect.top + this.y - this.radius}px`;
     this.popup.textContent = this.skill.desc;
     this.popup.style.display = "block";
     this.popup.style.zIndex = "20";
@@ -150,27 +166,21 @@ class Ball {
 }
 
 // Các hằng số
-const gravity = 0.1;
-const friction = 0.99;
-const minSpeed = 2;
+const gravity = 0.05;
+const friction = 1; // Đặt friction = 1 để không giảm tốc độ
+// Bỏ minSpeed vì không cần thiết khi không có giảm dần
 
 // Danh sách skills
 const skills: Skill[] = [
-  { name: "HTML", desc: "Ngôn ngữ đánh dấu để tạo cấu trúc web" },
-  { name: "CSS", desc: "Ngôn ngữ định kiểu cho giao diện web" },
-  { name: "JavaScript", desc: "Ngôn ngữ lập trình cho web động" },
-  { name: "React", desc: "Thư viện JS để xây dựng UI" },
-  { name: "Node.js", desc: "Môi trường chạy JS phía server" },
-  { name: "Python", desc: "Ngôn ngữ lập trình đa năng" },
-  { name: "Figma", desc: "Công cụ thiết kế UI/UX" },
-  { name: "UI/UX", desc: "Thiết kế trải nghiệm người dùng" },
-  { name: "Vue", desc: "Framework JS để xây dựng UI" },
-  { name: "Nuxt", desc: "Framework dựa trên Vue cho SSR" },
-  { name: "Nest", desc: "Framework Node.js cho backend" },
-  { name: "Next", desc: "Framework React cho SSR và SSG" },
-  { name: "Git", desc: "Hệ thống quản lý phiên bản" },
-  { name: "Teamwork", desc: "Kỹ năng làm việc nhóm" },
-  { name: "Laravel", desc: "Framework PHP cho phát triển web" },
+  { name: "HTML, CSS", desc: "" },
+  { name: "Javascript", desc: "" },
+  { name: "Typescript", desc: "" },
+  { name: "VueJS, NuxtJS", desc: "" },
+  { name: "PHP", desc: "" },
+  { name: "Git", desc: "" },
+  { name: "Communicate", desc: "" },
+  { name: "Teamwork", desc: "" },
+  { name: "Responsibility", desc: "" },
 ];
 
 // Mảng chứa các bóng
@@ -180,10 +190,28 @@ let draggedBall: Ball | null = null;
 onMounted(() => {
   const canvas = ballCanvas.value!;
   const ctx = canvas.getContext("2d")!;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
 
-  // Hàm lấy tọa độ chuột tương đối với canvas
+  const calculateRadius = (canvasWidth: number): number => {
+    let baseRadius: number;
+    if (canvasWidth <= 430) {
+      baseRadius = canvasWidth * 0.04;
+    } else {
+      baseRadius = canvasWidth * 0.05;
+    }
+    return Math.max(30, Math.min(baseRadius, 75));
+  };
+
+  const updateCanvasSize = () => {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const newRadius = calculateRadius(canvas.width);
+    balls.forEach((ball) => ball.updateSize(newRadius));
+  };
+
+  updateCanvasSize();
+
   const getMousePos = (event: MouseEvent) => {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -192,18 +220,17 @@ onMounted(() => {
     };
   };
 
-  // Khởi tạo các bóng
   function init() {
+    balls.length = 0;
+    const radius = calculateRadius(canvas.width);
     for (let i = 0; i < skills.length; i++) {
-      const radius = 50;
       const x = Math.random() * (canvas.width - radius * 2) + radius;
       const y = -radius;
-      const dy = 1;
+      const dy = 0.8; // Tốc độ rơi ban đầu là 0.8
       balls.push(new Ball(skills[i], x, y, dy, radius));
     }
   }
 
-  // Hàm animate
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -217,14 +244,12 @@ onMounted(() => {
     requestAnimationFrame(animate);
   }
 
-  // Sự kiện chuột
   canvas.addEventListener("mousedown", (e) => {
     const mousePos = getMousePos(e);
-    const mouseX = mousePos.x;
-    const mouseY = mousePos.y;
-
     balls.forEach((ball) => {
-      const dist = Math.sqrt((mouseX - ball.x) ** 2 + (mouseY - ball.y) ** 2);
+      const dist = Math.sqrt(
+        (mousePos.x - ball.x) ** 2 + (mousePos.y - ball.y) ** 2
+      );
       if (dist < ball.radius) {
         draggedBall = ball;
         ball.isDragged = true;
@@ -236,25 +261,24 @@ onMounted(() => {
 
   canvas.addEventListener("mousemove", (e) => {
     const mousePos = getMousePos(e);
-    const mouseX = mousePos.x;
-    const mouseY = mousePos.y;
+    const canvasRect = canvas.getBoundingClientRect();
 
     if (draggedBall) {
-      draggedBall.x = mouseX;
-      draggedBall.y = mouseY;
+      draggedBall.x = mousePos.x;
+      draggedBall.y = mousePos.y;
     } else {
       balls.forEach((ball) => {
-        const dist = Math.sqrt((mouseX - ball.x) ** 2 + (mouseY - ball.y) ** 2);
-        if (dist < ball.radius && !ball.isDragged) {
+        const dist = Math.sqrt(
+          (mousePos.x - ball.x) ** 2 + (mousePos.y - ball.y) ** 2
+        );
+        if (dist < ball.radius) {
           if (!ball.isHovered) {
             ball.isHovered = true;
-            ball.showPopup();
+            // ball.showPopup(canvasRect);
           }
-        } else {
-          if (ball.isHovered) {
-            ball.isHovered = false;
-            ball.hidePopup();
-          }
+        } else if (ball.isHovered) {
+          ball.isHovered = false;
+          ball.hidePopup();
         }
       });
     }
@@ -262,8 +286,8 @@ onMounted(() => {
 
   canvas.addEventListener("mouseup", () => {
     if (draggedBall) {
-      draggedBall.dx = Math.random() * 6 - 3;
-      draggedBall.dy = Math.random() * 6 - 3;
+      draggedBall.dx = Math.random() < 0.5 ? 0.8 : -0.8; // Tốc độ ban đầu là 0.8 hoặc -0.8
+      draggedBall.dy = Math.random() < 0.5 ? 0.8 : -0.8; // Tốc độ ban đầu là 0.8 hoặc -0.8
       draggedBall.isDragged = false;
       draggedBall.hasBounced = true;
       draggedBall.isSeparated = true;
@@ -271,18 +295,19 @@ onMounted(() => {
     }
   });
 
-  // Xử lý resize
   const handleResize = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    updateCanvasSize();
+    init();
+    const canvasRect = canvas.getBoundingClientRect();
+    // balls.forEach((ball) => {
+    //   if (ball.isHovered) ball.showPopup(canvasRect);
+    // });
   };
   window.addEventListener("resize", handleResize);
 
-  // Khởi chạy
   init();
   animate();
 
-  // Cleanup khi component bị hủy
   onUnmounted(() => {
     window.removeEventListener("resize", handleResize);
     balls.forEach((ball) => document.body.removeChild(ball.popup));
@@ -295,6 +320,7 @@ onMounted(() => {
   min-height: auto;
   padding-bottom: 7rem;
   background-color: var(--bg-color);
+  position: relative;
 
   #ballCanvas {
     width: 100%;
